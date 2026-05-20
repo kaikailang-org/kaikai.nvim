@@ -1,0 +1,131 @@
+*kaikai.txt*  Neovim plugin for the kaikai programming language
+
+Author:   kaikai contributors
+License:  MIT
+Homepage: https://github.com/kaikailang-org/kaikai.nvim
+
+==============================================================================
+CONTENTS                                                      *kaikai-contents*
+
+  1. Introduction ......................... |kaikai|
+  2. Setup ................................ |kaikai-setup|
+  3. LSP .................................. |kaikai-lsp|
+  4. Tree-sitter .......................... |kaikai-treesitter|
+  5. Snippets ............................. |kaikai-snippets|
+  6. Health ............................... |kaikai-health|
+  7. FAQ .................................. |kaikai-faq|
+
+==============================================================================
+1. Introduction                                                        *kaikai*
+
+`kaikai.nvim` is the official Neovim plugin for the kaikai programming
+language (https://kaikai-lang.org). It bundles:
+
+  - Filetype detection for `*.kai`
+  - Settings via ftplugin (commentstring, indent, fold)
+  - Regex-based syntax highlighting (fallback)
+  - Tree-sitter parser registration (recommended)
+  - Language Server integration via `kai lsp`
+  - LuaSnip snippets
+  - `:checkhealth kaikai`
+
+The plugin targets Neovim >= 0.10.
+
+==============================================================================
+2. Setup                                                         *kaikai-setup*
+
+The simplest setup uses defaults:
+>lua
+    require("kaikai").setup({})
+<
+With explicit options:
+>lua
+    require("kaikai").setup({
+      lsp = {
+        enabled = true,
+        cmd = { "kai", "lsp" },
+        on_attach = function(client, bufnr)
+          -- your keymaps here
+        end,
+        settings = {},
+      },
+      treesitter = {
+        enabled = true,
+        ensure_installed = true,
+      },
+      snippets = {
+        enabled = true,
+      },
+    })
+<
+
+==============================================================================
+3. LSP                                                             *kaikai-lsp*
+
+The plugin wires the `kai lsp` binary as a language server. If
+`nvim-lspconfig` is available it registers a `kaikai` config; otherwise it
+falls back to |vim.lsp.start()| inside a FileType=kaikai autocmd.
+
+Capabilities (LSP v2):
+  - hover
+  - definition
+  - publishDiagnostics
+  - documentSymbol
+
+Root markers: `kai.toml`, `.git`.
+
+Override the binary or arguments via `lsp.cmd`:
+>lua
+    require("kaikai").setup({
+      lsp = { cmd = { "/opt/kaikai/bin/kai", "lsp" } },
+    })
+<
+
+==============================================================================
+4. Tree-sitter                                             *kaikai-treesitter*
+
+The plugin registers `tree-sitter-kaikai` as a custom parser pointing at
+https://github.com/kaikailang-org/tree-sitter-kaikai. With
+`treesitter.ensure_installed = true` the plugin will run `:TSInstall! kaikai`
+on first load.
+
+If `nvim-treesitter` is not installed the plugin falls back to the regex
+syntax in `syntax/kaikai.vim`.
+
+==============================================================================
+5. Snippets                                                  *kaikai-snippets*
+
+LuaSnip snippets are loaded lazily on the first `FileType=kaikai` event.
+Available triggers:
+
+  fn, fnblock, pubfn, match, match_arm, type_sum, type_record, effect,
+  protocol, impl, handle, test, import, lambda, let
+
+Disable with: `require("kaikai").setup({ snippets = { enabled = false } })`.
+
+==============================================================================
+6. Health                                                      *kaikai-health*
+
+Run: >
+    :checkhealth kaikai
+<
+Checks:
+  - `kai` on $PATH and version >= 0.76.0
+  - nvim-lspconfig availability (optional)
+  - tree-sitter parser installation
+  - LuaSnip availability (optional)
+
+==============================================================================
+7. FAQ                                                            *kaikai-faq*
+
+Q: Is Mason supported?
+A: Not yet. Install the kaikai toolchain via Homebrew:
+   `brew install kaikailang-org/kaikai/kaikai`
+
+Q: How do I disable the bundled snippets?
+A: `require("kaikai").setup({ snippets = { enabled = false } })`.
+
+Q: How do I use a custom on_attach?
+A: Pass it via `lsp.on_attach`. See |kaikai-setup|.
+
+ vim:tw=78:et:ft=help:norl:
