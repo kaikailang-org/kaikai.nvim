@@ -10,7 +10,6 @@ local defaults = {
   },
   treesitter = {
     enabled = true,
-    ensure_installed = true,
   },
   snippets = {
     enabled = true,
@@ -38,6 +37,13 @@ function M.setup(opts)
 
   -- snippets are loaded lazily via plugin/kaikai.lua (FileType autocmd)
   -- to keep startup cheap; nothing to do here.
+
+  -- :KaikaiBuild — (re)build the bundled tree-sitter parser. lazy.nvim
+  -- also wires this via its `build` hook, but the command is useful for
+  -- manual rebuilds without re-running the package manager.
+  vim.api.nvim_create_user_command("KaikaiBuild", function()
+    require("kaikai.build").build()
+  end, { desc = "Build the bundled tree-sitter parser for kaikai." })
 end
 
 return M

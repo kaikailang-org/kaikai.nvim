@@ -25,6 +25,20 @@ local function version_ge(a, b)
   return true
 end
 
+local function check_neovim()
+  start("kaikai: neovim runtime")
+
+  local v = vim.version()
+  local s = string.format("%d.%d.%d", v.major, v.minor, v.patch)
+  if v.major == 0 and v.minor < 9 then
+    error_("Neovim " .. s .. " is too old; minimum is 0.9 (tree-sitter native API).")
+  elseif v.major == 0 and v.minor < 11 then
+    warn("Neovim " .. s .. " — LSP works via fallback path; upgrade to 0.11+ for vim.lsp.config.")
+  else
+    ok("Neovim " .. s)
+  end
+end
+
 local function check_kai_binary()
   start("kaikai: compiler / language server")
 
@@ -63,21 +77,22 @@ local function check_kai_binary()
 end
 
 local function check_treesitter()
-  start("kaikai: tree-sitter parser")
+  start("kaikai: tree-sitter parser (bundled)")
 
-  local has_ts, parsers = pcall(require, "nvim-treesitter.parsers")
-  if not has_ts then
-    info("nvim-treesitter is not installed (optional, fallback to regex syntax)")
-    return
+  local ts = require("kaikai.treesitter")
+  if ts.is_parser_built() then
+    ok("parser built at " .. ts.parser_path())
+  else
+    warn("parser not built", {
+      "Run `:KaikaiBuild` to compile it now",
+      "Or `:Lazy build kaikai.nvim` if you use lazy.nvim",
+    })
   end
 
-  if parsers.has_parser and parsers.has_parser("kaikai") then
-    ok("tree-sitter parser `kaikai` is installed")
+  if vim.fn.executable("cc") == 1 or vim.fn.executable("clang") == 1 or vim.fn.executable("gcc") == 1 then
+    ok("C compiler available for parser build")
   else
-    warn("tree-sitter parser `kaikai` is not installed", {
-      "Run `:TSInstall kaikai`",
-      "Grammar: https://github.com/kaikailang-org/tree-sitter-kaikai",
-    })
+    warn("no C compiler in PATH; parser build will fail")
   end
 end
 
@@ -92,19 +107,9 @@ local function check_snippets()
   end
 end
 
-local function check_lspconfig()
-  start("kaikai: lspconfig")
-
-  if pcall(require, "lspconfig") then
-    ok("nvim-lspconfig is available")
-  else
-    info("nvim-lspconfig is not installed (optional, plugin falls back to vim.lsp.start)")
-  end
-end
-
 function M.check()
+  check_neovim()
   check_kai_binary()
-  check_lspconfig()
   check_treesitter()
   check_snippets()
 end

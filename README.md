@@ -4,19 +4,20 @@ Official Neovim plugin for the [kaikai](https://kaikai-lang.org) programming
 language: filetype detection, syntax highlighting, tree-sitter, LSP, and
 snippets — batteries included.
 
-> Requires Neovim ≥ 0.10 and the `kai` toolchain (≥ 0.76.0).
+> Requires Neovim ≥ 0.11 (for `vim.lsp.config`) and the `kai` toolchain
+> (≥ 0.76.0). Works on 0.9 / 0.10 with a fallback LSP path.
 
 ## Features
 
-| Feature              | How                                                          |
-| -------------------- | ------------------------------------------------------------ |
-| Filetype detection   | `*.kai` → `filetype=kaikai`                                  |
-| Buffer settings      | `commentstring = "# %s"`, 2-space indent, tree-sitter folds  |
-| Syntax highlighting  | Tree-sitter (preferred) with regex fallback                  |
-| LSP                  | `kai lsp` over stdio via `nvim-lspconfig` or `vim.lsp.start` |
-| LSP capabilities     | hover, goto-definition, diagnostics, documentSymbol          |
-| Snippets             | LuaSnip (`fn`, `match`, `type_sum`, `effect`, `handle`, …)   |
-| Health check         | `:checkhealth kaikai`                                        |
+| Feature              | How                                                                 |
+| -------------------- | ------------------------------------------------------------------- |
+| Filetype detection   | `*.kai` → `filetype=kaikai`                                         |
+| Buffer settings      | `commentstring = "# %s"`, 2-space indent, tree-sitter folds         |
+| Syntax highlighting  | Tree-sitter (bundled parser) with regex fallback                    |
+| LSP                  | `kai lsp` over stdio via `vim.lsp.config` (0.11+) or `vim.lsp.start`|
+| LSP capabilities     | hover, goto-definition, diagnostics, documentSymbol                 |
+| Snippets             | LuaSnip (`fn`, `match`, `type_sum`, `effect`, `handle`, …)          |
+| Health check         | `:checkhealth kaikai`                                               |
 
 ## Install
 
@@ -26,17 +27,21 @@ Make sure the `kai` binary is on your `$PATH`. The easiest way is Homebrew:
 brew install kaikailang-org/kaikai/kaikai
 ```
 
+You also need a C compiler (`cc`, `clang`, or `gcc`) in your `$PATH`. It is
+used once, on first install, to compile the bundled tree-sitter parser.
+
 ### lazy.nvim
 
 ```lua
 {
   "kaikailang-org/kaikai.nvim",
   ft = "kaikai",
-  dependencies = {
-    "neovim/nvim-lspconfig",
-    "nvim-treesitter/nvim-treesitter",
-    "L3MON4D3/LuaSnip",
-  },
+  build = function() require("kaikai.build").build() end,
+  init = function()
+    -- So `nvim foo.kai` from a cold start triggers the `ft` load.
+    vim.filetype.add({ extension = { kai = "kaikai" } })
+  end,
+  dependencies = { "L3MON4D3/LuaSnip" }, -- optional, only for snippets
   opts = {},
 }
 ```
@@ -47,12 +52,9 @@ brew install kaikailang-org/kaikai/kaikai
 use({
   "kaikailang-org/kaikai.nvim",
   ft = { "kaikai" },
-  requires = {
-    "neovim/nvim-lspconfig",
-    "nvim-treesitter/nvim-treesitter",
-    "L3MON4D3/LuaSnip",
-  },
+  run = function() require("kaikai.build").build() end,
   config = function()
+    vim.filetype.add({ extension = { kai = "kaikai" } })
     require("kaikai").setup({})
   end,
 })
@@ -78,8 +80,7 @@ require("kaikai").setup({
     capabilities  = nil,
   },
   treesitter = {
-    enabled          = true,
-    ensure_installed = true,
+    enabled = true,
   },
   snippets = {
     enabled = true,
@@ -125,20 +126,34 @@ The `kai lsp` server (v2) implements:
 Completion and signature help are on the roadmap. See the upstream
 [`lsp.md`](https://github.com/lnds/kaikai/blob/main/docs/lsp.md) for details.
 
+The plugin uses Neovim 0.11's `vim.lsp.config` + `vim.lsp.enable` API
+(no `require('lspconfig')` framework — that is deprecated upstream). On
+Neovim 0.10 it falls back to a `FileType` autocmd that calls
+`vim.lsp.start` directly.
+
 ## Tree-sitter
 
-The plugin registers a parser config for `kaikai` pointing at
-[`kaikailang-org/tree-sitter-kaikai`](https://github.com/kaikailang-org/tree-sitter-kaikai).
+The plugin **bundles** its tree-sitter parser. On install (lazy.nvim's
+`build` hook or `:KaikaiBuild`) we clone
+[`kaikailang-org/tree-sitter-kaikai`](https://github.com/kaikailang-org/tree-sitter-kaikai)
+into a temp dir, compile `src/parser.c` with your `cc`, and write the
+result to `parser/kaikai.so` inside the plugin directory. Queries are
+copied to `queries/kaikai/`.
 
-With `treesitter.ensure_installed = true` (default) the parser is installed on
-first load via `:TSInstall! kaikai`. To install manually:
+At runtime we register the parser with Neovim's *native*
+`vim.treesitter.language.add` — no `nvim-treesitter` plugin required. This
+keeps the plugin compatible with both nvim-treesitter `master` (legacy)
+and `main` (new, which dropped runtime parser registration), as well as
+users who don't run nvim-treesitter at all.
+
+To rebuild manually after a grammar update:
 
 ```vim
-:TSInstall kaikai
+:KaikaiBuild
 ```
 
-If `nvim-treesitter` is not present, the plugin falls back to the regex
-syntax shipped in `syntax/kaikai.vim`.
+If the parser is missing the plugin falls back to the regex
+`syntax/kaikai.vim` file.
 
 ## Snippets
 
@@ -155,7 +170,8 @@ Disable with `snippets = { enabled = false }`.
 :checkhealth kaikai
 ```
 
-Checks the `kai` binary, version, tree-sitter parser, lspconfig, and LuaSnip.
+Checks the Neovim version, `kai` binary, parser build state, C compiler
+availability, and LuaSnip.
 
 ## License
 
