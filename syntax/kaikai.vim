@@ -28,10 +28,10 @@ syn keyword kaikaiTodo      contained TODO FIXME XXX NOTE HACK
 " Keywords (kept in sync with stage2/compiler.kai keyword_kind)
 " --------------------------------------------------------------------
 syn keyword kaikaiKeyword
-      \ and as assert axiom const effect else ensures
-      \ false fn for handle if impl import let match
-      \ not or protocol pub requires test true type
-      \ unit use var where with
+      \ and as assert axiom bench case check const effect else ensures
+      \ extern false fn for handle if impl import let match
+      \ not or priv protocol pub requires test theory true type
+      \ unit use var when where with
 
 syn keyword kaikaiBoolean   true false
 
