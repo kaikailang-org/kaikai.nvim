@@ -14,13 +14,13 @@ local fmt = require("luasnip.extras.fmt").fmt
 local snippets = {
 
   s("fn", fmt(
-    "fn {}({}) -> {} = {}",
+    "fn {}({}) : {} = {}",
     { i(1, "name"), i(2, "args"), i(3, "Unit"), i(0, "body") }
   )),
 
   s("fnblock", fmt(
     [[
-fn {}({}) -> {} {{
+fn {}({}) : {} {{
   {}
 }}
 ]],
@@ -29,7 +29,7 @@ fn {}({}) -> {} {{
 
   s("pubfn", fmt(
     [[
-pub fn {}({}) -> {} {{
+pub fn {}({}) : {} {{
   {}
 }}
 ]],
@@ -39,15 +39,15 @@ pub fn {}({}) -> {} {{
   s("match", fmt(
     [[
 match {} {{
-  {} => {},
-  _ => {},
+  {} -> {}
+  _ -> {}
 }}
 ]],
     { i(1, "scrutinee"), i(2, "Pat"), i(3, "expr"), i(0, "default") }
   )),
 
   s("match_arm", fmt(
-    "{} => {},",
+    "{} -> {}",
     { i(1, "Pat"), i(0, "expr") }
   )),
 
@@ -73,25 +73,25 @@ type {} = {{
   s("effect", fmt(
     [[
 effect {} {{
-  {}: {} -> {}
+  {}({}) : {}
 }}
 ]],
-    { i(1, "Name"), i(2, "op"), i(3, "Unit"), i(0, "Unit") }
+    { i(1, "Name"), i(2, "op"), i(3), i(0, "Unit") }
   )),
 
   s("protocol", fmt(
     [[
-protocol {}[{}] {{
-  fn {}(self: {}) -> {}
+protocol {} {{
+  {}(x: Self) : {}
 }}
 ]],
-    { i(1, "Name"), i(2, "T"), i(3, "method"), i(4, "T"), i(0, "Unit") }
+    { i(1, "Name"), i(2, "method"), i(0, "Unit") }
   )),
 
   s("impl", fmt(
     [[
 impl {} for {} {{
-  fn {}(self: {}) -> {} {{
+  fn {}(x: {}) : {} {{
     {}
   }}
 }}
@@ -101,12 +101,14 @@ impl {} for {} {{
 
   s("handle", fmt(
     [[
-handle {} with {{
-  {}({}) => {},
-  return({}) => {},
+handle {{
+  {}
+}} with {} {{
+  {}({}) -> {}
+  return({}) -> {}
 }}
 ]],
-    { i(1, "expr"), i(2, "Op"), i(3, "args"), i(4, "resume"), i(5, "v"), i(0, "v") }
+    { i(1, "body"), i(2, "Effect"), i(3, "op"), i(4, "resume"), i(5, "resume(())"), i(6, "v"), i(0, "v") }
   )),
 
   s("test", fmt(
@@ -118,13 +120,31 @@ test "{}" {{
     { i(1, "describes the case"), i(0, "assert true") }
   )),
 
+  s("bench", fmt(
+    [[
+bench "{}" {{
+  {}
+}}
+]],
+    { i(1, "measures the case"), i(0, "body") }
+  )),
+
+  s("check", fmt(
+    [[
+check "{}" with {}: {} {{
+  {}
+}}
+]],
+    { i(1, "states the property"), i(2, "n"), i(3, "Int"), i(0, "true") }
+  )),
+
   s("import", fmt(
     "import {}",
     { i(0, "module.path") }
   )),
 
   s("lambda", fmt(
-    "fn ({}) => {}",
+    "({}) => {}",
     { i(1, "x"), i(0, "x") }
   )),
 

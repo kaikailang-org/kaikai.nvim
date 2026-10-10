@@ -5,7 +5,7 @@ language: filetype detection, syntax highlighting, tree-sitter, LSP, and
 snippets — batteries included.
 
 > Requires Neovim ≥ 0.11 (for `vim.lsp.config`) and the `kai` toolchain
-> (≥ 0.76.0). Works on 0.9 / 0.10 with a fallback LSP path.
+> (≥ 0.139.0). Works on 0.9 / 0.10 with a fallback LSP path.
 
 ## Features
 
@@ -15,7 +15,7 @@ snippets — batteries included.
 | Buffer settings      | `commentstring = "# %s"`, 2-space indent, tree-sitter folds         |
 | Syntax highlighting  | Tree-sitter (bundled parser) with regex fallback                    |
 | LSP                  | `kai lsp` over stdio via `vim.lsp.config` (0.11+) or `vim.lsp.start`|
-| LSP capabilities     | hover, goto-definition, diagnostics, documentSymbol                 |
+| LSP capabilities     | hover, goto-definition, diagnostics, documentSymbol, completion, signatureHelp |
 | Snippets             | LuaSnip (`fn`, `match`, `type_sum`, `effect`, `handle`, …)          |
 | Health check         | `:checkhealth kaikai`                                               |
 
@@ -116,14 +116,17 @@ require("kaikai").setup({
 
 ## LSP capabilities
 
-The `kai lsp` server (v2) implements:
+The `kai lsp` server (v3) implements:
 
 - `textDocument/hover` — inferred type at point
 - `textDocument/definition` — goto definition
-- `textDocument/publishDiagnostics` — partial (T1–T5 diagnostics)
+- `textDocument/publishDiagnostics` — compile errors, plus a warning per
+  unfilled typed hole carrying its expected type
 - `textDocument/documentSymbol` — outline
+- `textDocument/completion` — top-level names (user fns, stdlib, core builtins)
+- `textDocument/signatureHelp` — signature of the call under the cursor
 
-Completion and signature help are on the roadmap. See the upstream
+References, rename and cross-file resolution are on the roadmap. See the upstream
 [`lsp.md`](https://github.com/lnds/kaikai/blob/main/docs/lsp.md) for details.
 
 The plugin uses Neovim 0.11's `vim.lsp.config` + `vim.lsp.enable` API
@@ -160,7 +163,8 @@ If the parser is missing the plugin falls back to the regex
 LuaSnip snippets are loaded on the first `FileType=kaikai` event. Triggers:
 
 `fn`, `fnblock`, `pubfn`, `match`, `match_arm`, `type_sum`, `type_record`,
-`effect`, `protocol`, `impl`, `handle`, `test`, `import`, `lambda`, `let`.
+`effect`, `protocol`, `impl`, `handle`, `test`, `bench`, `check`, `import`,
+`lambda`, `let`.
 
 Disable with `snippets = { enabled = false }`.
 

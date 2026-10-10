@@ -66,11 +66,13 @@ The plugin wires the `kai lsp` binary as a language server. If
 `nvim-lspconfig` is available it registers a `kaikai` config; otherwise it
 falls back to |vim.lsp.start()| inside a FileType=kaikai autocmd.
 
-Capabilities (LSP v2):
+Capabilities (LSP v3):
   - hover
   - definition
   - publishDiagnostics
   - documentSymbol
+  - completion
+  - signatureHelp
 
 Root markers: `kai.toml`, `.git`.
 
@@ -99,7 +101,7 @@ LuaSnip snippets are loaded lazily on the first `FileType=kaikai` event.
 Available triggers:
 
   fn, fnblock, pubfn, match, match_arm, type_sum, type_record, effect,
-  protocol, impl, handle, test, import, lambda, let
+  protocol, impl, handle, test, bench, check, import, lambda, let
 
 Disable with: `require("kaikai").setup({ snippets = { enabled = false } })`.
 
@@ -110,7 +112,7 @@ Run: >
     :checkhealth kaikai
 <
 Checks:
-  - `kai` on $PATH and version >= 0.76.0
+  - `kai` on $PATH and version >= 0.139.0
   - nvim-lspconfig availability (optional)
   - tree-sitter parser installation
   - LuaSnip availability (optional)

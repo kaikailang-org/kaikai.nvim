@@ -4,7 +4,7 @@
 " Filenames:    *.kai
 "
 " Heuristic-based highlighting tracking the stage 2 lexer in
-" stage2/compiler.kai. There is no semantic information: type vs.
+" stage2/compiler/lex.kai. There is no semantic information: type vs.
 " constructor vs. effect-label is approximated by capitalisation.
 " A real LSP-driven highlighter is scheduled for milestone m17.
 
@@ -18,14 +18,15 @@ set cpo&vim
 syn case match
 
 " --------------------------------------------------------------------
-" Comments  ('#' to end of line; '#derive' is a token, kept distinct)
+" Comments  ('#' to end of line; '#[' opens an attribute instead)
 " --------------------------------------------------------------------
-syn match   kaikaiDerive    "#derive\>"
-syn match   kaikaiComment   "#\(derive\>\)\@!.*$" contains=kaikaiTodo
+syn region  kaikaiAttribute start="#\[" end="\]" oneline
+      \ contains=kaikaiConstructor,kaikaiString
+syn match   kaikaiComment   "#\[\@!.*$" contains=kaikaiTodo
 syn keyword kaikaiTodo      contained TODO FIXME XXX NOTE HACK
 
 " --------------------------------------------------------------------
-" Keywords (kept in sync with stage2/compiler.kai keyword_kind)
+" Keywords (kept in sync with stage2/compiler/lex.kai keyword_at)
 " --------------------------------------------------------------------
 syn keyword kaikaiKeyword
       \ and as assert axiom bench case check const effect else ensures
@@ -42,18 +43,21 @@ syn match   kaikaiTodoBang  "\<todo!"
 " Built-in primitives and well-known stdlib type names
 " --------------------------------------------------------------------
 syn keyword kaikaiType
-      \ Int Real Bool String Char Unit Nothing
+      \ Int Real Bool String Char Unit Nothing Self
+      \ Byte Int32 UInt32 UInt64 Int128 BigInt Complex
       \ Option Result List Pair Map Set Stack Queue Array
       \ Decimal Money Fiber Pid Regex Match Capture
       \ WallTime Instant Duration
 
 " --------------------------------------------------------------------
-" Built-in effect labels (Doc B catalog)
+" Built-in effect labels (stdlib catalog)
 " --------------------------------------------------------------------
 syn keyword kaikaiEffect
       \ Console Stdin Stdout Stderr File Env State
       \ Reader Writer Actor Spawn Cancel Mutable
-      \ Fail Random Time Clock Ffi
+      \ Fail Random Time Clock Ffi Process Signal Log
+      \ SecureRandom Link Monitor Yield Trace
+      \ NetTcp NetUdp NetUnix NetDns
 
 " --------------------------------------------------------------------
 " Constructors / capitalised callees and bare type names
@@ -64,18 +68,23 @@ syn match   kaikaiConstructor "\<[A-Z][A-Za-z0-9_]*\>"
 
 " --------------------------------------------------------------------
 " Numbers
-"   Integers:  123, 1_000_000
+"   Integers:  123, 1_000_000, 0xFF, 0b1010
 "   Reals:     1.0, 1.5e-3, 2E10
+"   Suffixes:  i32 u32 u64 i128 u8 (fixed width, integers only),
+"              n (BigInt), d (Decimal), i (Complex)
 "   Optional unit-of-measure suffix is matched separately to keep the
 "   numeric literal contiguous (the '<' is matched by an operator rule).
 " --------------------------------------------------------------------
-syn match   kaikaiNumber    "\<\d[0-9_]*\(\.\d[0-9_]*\)\?\([eE][+-]\?\d\+\)\?\>"
+syn match   kaikaiNumber    "\<\d[0-9_]*\(\.\d[0-9_]*\)\?\([eE][+-]\?\d\+\)\?[di]\?\>"
+syn match   kaikaiNumber    "\<\d[0-9_]*\(i32\|u32\|u64\|i128\|u8\|n\)\>"
+syn match   kaikaiNumber    "\<0[xX][0-9a-fA-F_]\+\(i32\|u32\|u64\|i128\|u8\)\?\>"
+syn match   kaikaiNumber    "\<0[bB][01_]\+\(i32\|u32\|u64\|i128\|u8\)\?\>"
 
 " --------------------------------------------------------------------
 " Strings (single-line "..." and triple-quoted """...""")
 "   Both support backslash escapes and #{...} interpolation.
 " --------------------------------------------------------------------
-syn match   kaikaiEscape    contained "\\\([\\\"'nrt0]\|u{[0-9a-fA-F]\+}\)"
+syn match   kaikaiEscape    contained "\\\([\\\"'nrt0]\|x\x\{2}\|u{\x\{1,6}}\)"
 syn region  kaikaiInterp    contained matchgroup=kaikaiInterpDelim
       \ start="#{" end="}"
       \ contains=kaikaiNumber,kaikaiKeyword,kaikaiBoolean,kaikaiType,
@@ -87,9 +96,14 @@ syn region  kaikaiString    start=+"+ skip=+\\.+ end=+"+ oneline
       \ contains=kaikaiEscape,kaikaiInterp
 
 " --------------------------------------------------------------------
-" Char literals: 'c', '\n', '\u{1F600}'
+" Char literals: 'c', '\n', '\x41', '\u{1F600}'
 " --------------------------------------------------------------------
-syn match   kaikaiChar      "'\(\\\(u{[0-9a-fA-F]\+}\|.\)\|[^\\']\)'"
+syn match   kaikaiChar      "'\(\\\(u{\x\{1,6}}\|x\x\{2}\|.\)\|[^\\']\)'"
+
+" --------------------------------------------------------------------
+" Regex sigil: ~r/pattern/flags
+" --------------------------------------------------------------------
+syn match   kaikaiRegex     "\~r/\(\\.\|[^/\\]\)*/[a-z]*"
 
 " --------------------------------------------------------------------
 " Typed holes: ?  and ?name
@@ -99,8 +113,8 @@ syn match   kaikaiHole      "?\([a-zA-Z_][a-zA-Z0-9_]*\)\?"
 " --------------------------------------------------------------------
 " Operators and punctuation
 " --------------------------------------------------------------------
-syn match   kaikaiOperator  "->\|=>\|||>\||>\|::\|:=\|==\|!=\|<=\|>=\|&&\|||\|++\|\.\.\.\|\.\."
-syn match   kaikaiOperator  "[-+*/%<>=!?^|@:]"
+syn match   kaikaiOperator  "->\|=>\||>\||?\|:=\|==\|!=\|<=\|>=\|||\|++\|\.\.\.\|\.\."
+syn match   kaikaiOperator  "[-+*/%<>=!?^|@:&$]"
 
 " Pipe character on its own (sum-type alternation / handle clause).
 syn match   kaikaiPipe      "|"
@@ -116,7 +130,7 @@ syn match   kaikaiTypeDecl  "\(\<\(type\|effect\|protocol\|impl\)\s\+\)\@<=[A-Z]
 " --------------------------------------------------------------------
 hi def link kaikaiComment      Comment
 hi def link kaikaiTodo         Todo
-hi def link kaikaiDerive       PreProc
+hi def link kaikaiAttribute    PreProc
 hi def link kaikaiKeyword      Keyword
 hi def link kaikaiBoolean      Boolean
 hi def link kaikaiTodoBang     Special
@@ -129,6 +143,7 @@ hi def link kaikaiTripleString String
 hi def link kaikaiEscape       SpecialChar
 hi def link kaikaiInterpDelim  Special
 hi def link kaikaiChar         Character
+hi def link kaikaiRegex        String
 hi def link kaikaiHole         Special
 hi def link kaikaiOperator     Operator
 hi def link kaikaiPipe         Operator

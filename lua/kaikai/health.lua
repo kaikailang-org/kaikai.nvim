@@ -7,7 +7,7 @@ local warn = health.warn or health.report_warn
 local error_ = health.error or health.report_error
 local info = health.info or health.report_info
 
-local MIN_KAI_VERSION = "0.76.0"
+local MIN_KAI_VERSION = "0.139.0"
 
 local function parse_version(s)
   local major, minor, patch = s:match("(%d+)%.(%d+)%.(%d+)")
