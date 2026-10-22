@@ -112,7 +112,7 @@ Run: >
     :checkhealth kaikai
 <
 Checks:
-  - `kai` on $PATH and version >= 0.139.0
+  - `kai` on $PATH and version >= 0.171.1
   - nvim-lspconfig availability (optional)
   - tree-sitter parser installation
   - LuaSnip availability (optional)

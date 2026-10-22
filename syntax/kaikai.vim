@@ -20,8 +20,12 @@ syn case match
 " --------------------------------------------------------------------
 " Comments  ('#' to end of line; '#[' opens an attribute instead)
 " --------------------------------------------------------------------
-syn region  kaikaiAttribute start="#\[" end="\]" oneline
-      \ contains=kaikaiConstructor,kaikaiString
+syn region  kaikaiAttribute matchgroup=kaikaiAttribute start="#\[" end="\]"
+      \ contains=kaikaiAttrBrackets,kaikaiConstructor,kaikaiNumber,
+      \ kaikaiString,kaikaiTripleString,kaikaiChar
+syn region  kaikaiAttrBrackets contained transparent start="\[" end="\]"
+      \ contains=kaikaiAttrBrackets,kaikaiConstructor,kaikaiNumber,
+      \ kaikaiString,kaikaiTripleString,kaikaiChar
 syn match   kaikaiComment   "#\[\@!.*$" contains=kaikaiTodo
 syn keyword kaikaiTodo      contained TODO FIXME XXX NOTE HACK
 
@@ -30,11 +34,14 @@ syn keyword kaikaiTodo      contained TODO FIXME XXX NOTE HACK
 " --------------------------------------------------------------------
 syn keyword kaikaiKeyword
       \ and as assert axiom bench case check const effect else ensures
-      \ extern false fn for handle if impl import let match
+      \ extern false fn for handle if impl import lazy let match
       \ not or priv protocol pub requires test theory true type
       \ unit use var when where with
 
 syn keyword kaikaiBoolean   true false
+
+" `pub(pkg)`: `pkg` is a keyword only inside the visibility parens.
+syn match   kaikaiVisibility "\(\<pub\s*(\s*\)\@<=pkg\ze\s*)"
 
 " 'todo!' is a single token; mark it as a runtime escape.
 syn match   kaikaiTodoBang  "\<todo!"
@@ -45,7 +52,7 @@ syn match   kaikaiTodoBang  "\<todo!"
 syn keyword kaikaiType
       \ Int Real Bool String Char Unit Nothing Self
       \ Byte Int32 UInt32 UInt64 Int128 BigInt Complex
-      \ Option Result List Pair Map Set Stack Queue Array
+      \ Option Result List Pair Map Set Seq Stack Queue Array Bytes
       \ Decimal Money Fiber Pid Regex Match Capture
       \ WallTime Instant Duration
 
@@ -84,16 +91,21 @@ syn match   kaikaiNumber    "\<0[bB][01_]\+\(i32\|u32\|u64\|i128\|u8\)\?\>"
 " Strings (single-line "..." and triple-quoted """...""")
 "   Both support backslash escapes and #{...} interpolation.
 " --------------------------------------------------------------------
+syn match   kaikaiBadEscape contained "\\."
 syn match   kaikaiEscape    contained "\\\([\\\"'nrt0]\|x\x\{2}\|u{\x\{1,6}}\)"
+syn region  kaikaiInterpBraces contained transparent start="{" end="}"
+      \ contains=@kaikaiInterpItems
+syn cluster kaikaiInterpItems
+      \ contains=kaikaiInterpBraces,kaikaiNumber,kaikaiKeyword,kaikaiBoolean,
+      \ kaikaiType,kaikaiEffect,kaikaiConstructor,kaikaiOperator,kaikaiPipe,
+      \ kaikaiString,kaikaiTripleString,kaikaiChar,kaikaiHole
 syn region  kaikaiInterp    contained matchgroup=kaikaiInterpDelim
       \ start="#{" end="}"
-      \ contains=kaikaiNumber,kaikaiKeyword,kaikaiBoolean,kaikaiType,
-      \ kaikaiEffect,kaikaiConstructor,kaikaiOperator,kaikaiString,
-      \ kaikaiTripleString,kaikaiChar
+      \ contains=kaikaiFormatSpec,@kaikaiInterpItems
 syn region  kaikaiTripleString start=+"""+ end=+"""+
-      \ contains=kaikaiEscape,kaikaiInterp
-syn region  kaikaiString    start=+"+ skip=+\\.+ end=+"+ oneline
-      \ contains=kaikaiEscape,kaikaiInterp
+      \ contains=kaikaiBadEscape,kaikaiEscape,kaikaiInterp
+syn region  kaikaiString    start=+"\(""\)\@!+ skip=+\\.+ end=+"+ oneline
+      \ contains=kaikaiBadEscape,kaikaiEscape,kaikaiInterp
 
 " --------------------------------------------------------------------
 " Char literals: 'c', '\n', '\x41', '\u{1F600}'
@@ -106,24 +118,28 @@ syn match   kaikaiChar      "'\(\\\(u{\x\{1,6}}\|x\x\{2}\|.\)\|[^\\']\)'"
 syn match   kaikaiRegex     "\~r/\(\\.\|[^/\\]\)*/[a-z]*"
 
 " --------------------------------------------------------------------
-" Typed holes: ?  and ?name
-" --------------------------------------------------------------------
-syn match   kaikaiHole      "?\([a-zA-Z_][a-zA-Z0-9_]*\)\?"
-
-" --------------------------------------------------------------------
 " Operators and punctuation
 " --------------------------------------------------------------------
-syn match   kaikaiOperator  "->\|=>\||>\||?\|:=\|==\|!=\|<=\|>=\|||\|++\|\.\.\.\|\.\."
+syn match   kaikaiOperator  "->\|=>\||>\||?\||!\|??\|:=\|==\|!=\|<=\|>=\|||\|++\|\.\.\.\|\.\."
 syn match   kaikaiOperator  "[-+*/%<>=!?^|@:&$]"
 
 " Pipe character on its own (sum-type alternation / handle clause).
 syn match   kaikaiPipe      "|"
 
+" Defined after the operators so they win at the same column.
+" --------------------------------------------------------------------
+" Typed holes: ?  and ?name  (not the `?` of `??` or `|?`)
+" --------------------------------------------------------------------
+syn match   kaikaiHole      "\([?|]\)\@<!??\@!\([a-zA-Z_][a-zA-Z0-9_]*\)\="
+
+" A format spec closes an interpolation: `#{n:05}`, `#{s:<6}`, `#{r:8.2}`.
+syn match   kaikaiFormatSpec contained ":[<>^]\=\d*\(\.\d\+\)\=\ze}"
+
 " --------------------------------------------------------------------
 " fn / type / effect declaration heads — make the bound name stand out
 " --------------------------------------------------------------------
 syn match   kaikaiFnName    "\(\<fn\s\+\)\@<=[a-z_][A-Za-z0-9_]*"
-syn match   kaikaiTypeDecl  "\(\<\(type\|effect\|protocol\|impl\)\s\+\)\@<=[A-Z][A-Za-z0-9_]*"
+syn match   kaikaiTypeDecl  "\(\<\(type\|effect\|protocol\|impl\|kind\|opaque\)\s\+\)\@<=[A-Z][A-Za-z0-9_]*"
 
 " --------------------------------------------------------------------
 " Highlight links
@@ -141,6 +157,9 @@ hi def link kaikaiNumber       Number
 hi def link kaikaiString       String
 hi def link kaikaiTripleString String
 hi def link kaikaiEscape       SpecialChar
+hi def link kaikaiBadEscape    Error
+hi def link kaikaiFormatSpec   Special
+hi def link kaikaiVisibility   Keyword
 hi def link kaikaiInterpDelim  Special
 hi def link kaikaiChar         Character
 hi def link kaikaiRegex        String

@@ -5,7 +5,7 @@ language: filetype detection, syntax highlighting, tree-sitter, LSP, and
 snippets — batteries included.
 
 > Requires Neovim ≥ 0.11 (for `vim.lsp.config`) and the `kai` toolchain
-> (≥ 0.139.0). Works on 0.9 / 0.10 with a fallback LSP path.
+> (≥ 0.171.1). Works on 0.9 / 0.10 with a fallback LSP path.
 
 ## Features
 

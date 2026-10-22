@@ -86,7 +86,9 @@ function M.build(opts)
   end
 
   -- Flags follow tree-sitter-cli's `build --output`:
-  --   -O2 -fPIC -shared -I<src> src/parser.c -o kaikai.so
+  --   -O2 -fPIC -shared -I<src> src/parser.c [src/scanner.c] -o kaikai.so
+  -- The external scanner is compiled in when the grammar has one; the
+  -- parser references its symbols and fails to link or load without it.
   -- On macOS we still emit a `.so` (see header comment).
   local args = {
     cc,
@@ -96,9 +98,12 @@ function M.build(opts)
     "-I",
     vim.fs.joinpath(tmp, "src"),
     parser_src,
-    "-o",
-    target,
   }
+  local scanner_src = vim.fs.joinpath(tmp, "src", "scanner.c")
+  if vim.fn.filereadable(scanner_src) == 1 then
+    table.insert(args, scanner_src)
+  end
+  vim.list_extend(args, { "-o", target })
   ok, out = run(args)
   if not ok then
     error("kaikai.nvim build: compilation failed:\n" .. out)

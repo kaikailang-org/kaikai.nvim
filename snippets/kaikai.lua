@@ -53,8 +53,8 @@ match {} {{
 
   s("type_sum", fmt(
     [[
-type {} =
-  | {}
+type {}
+  = {}
   | {}
 ]],
     { i(1, "Name"), i(2, "VariantA"), i(0, "VariantB") }
